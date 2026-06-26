@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  STUDENT
+  PUBLISHER
+  ADMIN
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  fullName  String?  @map("full_name")
+  role      Role     @default(STUDENT)
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  resources Resource[]
+  purchases Purchase[]
+
+  @@map("users")
+}
+
+model Category {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  resources Resource[]
+
+  @@map("categories")
+}
+
+model Subject {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  resources Resource[]
+
+  @@map("subjects")
+}
+
+model Resource {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  description String
+  fileUrl     String?  @map("file_url")
+  coverUrl    String?  @map("cover_url")
+  price       Decimal  @default(0) @db.Decimal(10, 2)
+  isFree      Boolean  @default(true) @map("is_free")
+  isPublished Boolean  @default(false) @map("is_published")
+  fileType    String?  @map("file_type")
+  pageCount   Int?     @map("page_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  categoryId  String   @map("category_id") @db.Uuid
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  subjectId   String?  @map("subject_id") @db.Uuid
+  subject     Subject? @relation(fields: [subjectId], references: [id])
+
+  createdById String   @map("created_by_id") @db.Uuid
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  purchases Purchase[]
+
+  @@map("resources")
+}
+
+model Purchase {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  resourceId      String   @map("resource_id") @db.Uuid
+  amountPaid      Decimal  @map("amount_paid") @db.Decimal(10, 2)
+  stripePaymentId String?  @map("stripe_payment_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user     User     @relation(fields: [userId], references: [id])
+  resource Resource @relation(fields: [resourceId], references: [id])
+
+  @@unique([userId, resourceId])
+  @@map("purchases")
+}
