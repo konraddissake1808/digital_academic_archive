@@ -4,12 +4,26 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getMyRole } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import type { User } from "@supabase/supabase-js";
+
+function dashboardHref(role: string | null) {
+  if (role === "ADMIN") return "/admin/dashboard";
+  if (role === "PUBLISHER") return "/dashboard";
+  return "/profile";
+}
+
+function dashboardLabel(role: string | null) {
+  if (role === "ADMIN") return "Admin";
+  if (role === "PUBLISHER") return "Dashboard";
+  return "Profile";
+}
 
 export function Navbar() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const supabase = createClient();
 
@@ -26,6 +40,14 @@ export function Navbar() {
 
     return () => subscription.unsubscribe();
   }, [supabase.auth]);
+
+  useEffect(() => {
+    if (user) {
+      getMyRole().then(setRole);
+    } else {
+      setRole(null);
+    }
+  }, [user]);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -54,9 +76,9 @@ export function Navbar() {
           <div className="hidden sm:flex items-center gap-3">
             {user ? (
               <>
-                <Link href="/profile">
+                <Link href={dashboardHref(role)}>
                   <Button variant="ghost" size="sm">
-                    Profile
+                    {dashboardLabel(role)}
                   </Button>
                 </Link>
                 <Button variant="secondary" size="sm" onClick={handleSignOut}>
@@ -118,11 +140,11 @@ export function Navbar() {
             {user ? (
               <>
                 <Link
-                  href="/profile"
+                  href={dashboardHref(role)}
                   className="block text-sm text-gray-600 hover:text-gray-900"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Profile
+                  {dashboardLabel(role)}
                 </Link>
                 <button
                   onClick={() => {

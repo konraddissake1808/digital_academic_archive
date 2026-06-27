@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/dashboard/resources", label: "My Resources" },
+  { href: "/dashboard/import", label: "Import" },
 ];
 
 export function DashboardSidebar() {

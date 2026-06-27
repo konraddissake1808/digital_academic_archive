@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createResource, updateResource, type ResourceFormData } from "@/actions/publisher";
@@ -15,23 +14,15 @@ interface ResourceFormProps {
 }
 
 async function uploadFile(file: File): Promise<string> {
-  const res = await fetch("/api/upload", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fileName: file.name }),
-  });
-  if (!res.ok) throw new Error("Failed to get upload URL");
-  const { signedUrl, path } = await res.json();
+  const formData = new FormData();
+  formData.append("file", file);
 
-  const uploadRes = await fetch(signedUrl, {
-    method: "PUT",
-    body: file,
-    headers: { "Content-Type": file.type || "application/octet-stream" },
-  });
-  if (!uploadRes.ok) throw new Error("Failed to upload file");
-
-  const supabase = createClient();
-  const { data: { publicUrl } } = supabase.storage.from("resources").getPublicUrl(path);
+  const res = await fetch("/api/upload", { method: "POST", body: formData });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Upload failed (${res.status})`);
+  }
+  const { publicUrl } = await res.json();
   return publicUrl;
 }
 

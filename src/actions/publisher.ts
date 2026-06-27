@@ -25,7 +25,7 @@ export type ResourceFormData = {
   subjectId: string | null;
   price: number;
   isFree: boolean;
-  fileType: string;
+  fileType: string | null;
   pageCount: number | null;
   fileUrl: string | null;
   coverUrl: string | null;
@@ -77,4 +77,47 @@ export async function deleteResource(resourceId: string, _formData: FormData) {
   await prisma.purchase.deleteMany({ where: { resourceId } });
   await prisma.resource.delete({ where });
   revalidatePath("/dashboard/resources");
+}
+
+// Safe version for client-side import: returns result instead of throwing/redirecting.
+export async function importResource(
+  data: ResourceFormData
+): Promise<{ id: string } | { error: string }> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Not authenticated" };
+
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+    if (!dbUser || (dbUser.role !== "PUBLISHER" && dbUser.role !== "ADMIN")) {
+      return { error: "Not authorized" };
+    }
+
+    const resource = await prisma.resource.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        categoryId: data.categoryId,
+        subjectId: data.subjectId ?? undefined,
+        isFree: data.isFree,
+        price: String(data.price),
+        fileType: data.fileType ?? undefined,
+        pageCount: data.pageCount ?? undefined,
+        fileUrl: data.fileUrl ?? undefined,
+        coverUrl: data.coverUrl ?? undefined,
+        createdById: dbUser.id,
+      },
+    });
+    revalidatePath("/dashboard/resources");
+    return { id: resource.id };
+  } catch (err: unknown) {
+    console.error("[importResource] error:", err);
+    const e = err as { code?: string; meta?: { target?: string }; message?: string };
+    if (e.code) {
+      return { error: `DB error ${e.code}: ${e.message ?? "unknown"}` };
+    }
+    return { error: err instanceof Error ? err.message : "Failed to save resource" };
+  }
 }

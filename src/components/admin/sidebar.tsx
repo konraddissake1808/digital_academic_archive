@@ -10,6 +10,7 @@ const links = [
   { href: "/admin/resources", label: "Resources" },
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/subjects", label: "Subjects" },
+  { href: "/dashboard/import", label: "Import Resources" },
 ];
 
 export function AdminSidebar() {
