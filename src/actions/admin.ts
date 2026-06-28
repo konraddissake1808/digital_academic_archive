@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
@@ -50,12 +50,14 @@ export async function createCategory(formData: FormData) {
   const slug = (formData.get("slug") as string).trim();
   const description = (formData.get("description") as string).trim() || null;
   await prisma.category.create({ data: { name, slug, description } });
+  revalidateTag("categories");
   revalidatePath("/admin/categories");
 }
 
 export async function deleteCategory(categoryId: string, _formData: FormData) {
   await requireAdmin();
   await prisma.category.delete({ where: { id: categoryId } });
+  revalidateTag("categories");
   revalidatePath("/admin/categories");
 }
 
@@ -65,11 +67,13 @@ export async function createSubject(formData: FormData) {
   const slug = (formData.get("slug") as string).trim();
   const description = (formData.get("description") as string).trim() || null;
   await prisma.subject.create({ data: { name, slug, description } });
+  revalidateTag("subjects");
   revalidatePath("/admin/subjects");
 }
 
 export async function deleteSubject(subjectId: string, _formData: FormData) {
   await requireAdmin();
   await prisma.subject.delete({ where: { id: subjectId } });
+  revalidateTag("subjects");
   revalidatePath("/admin/subjects");
 }

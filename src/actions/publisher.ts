@@ -25,6 +25,7 @@ export type ResourceFormData = {
   subjectId: string | null;
   price: number;
   isFree: boolean;
+  isPublished?: boolean;
   fileType: string | null;
   pageCount: number | null;
   fileUrl: string | null;
@@ -103,6 +104,7 @@ export async function importResource(
         subjectId: data.subjectId ?? undefined,
         isFree: data.isFree,
         price: String(data.price),
+        isPublished: data.isPublished ?? false,
         fileType: data.fileType ?? undefined,
         pageCount: data.pageCount ?? undefined,
         fileUrl: data.fileUrl ?? undefined,

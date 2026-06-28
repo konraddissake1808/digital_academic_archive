@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import Link from "next/link";
 import { importResource } from "@/actions/publisher";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -99,6 +100,7 @@ export function ImportForm({ categories, subjects }: ImportFormProps) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [publishImmediately, setPublishImmediately] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
 
@@ -172,6 +174,7 @@ export function ImportForm({ categories, subjects }: ImportFormProps) {
           subjectId: entry.subjectId || null,
           isFree: entry.isFree,
           price: entry.isFree ? 0 : parseFloat(entry.price) || 0,
+          isPublished: publishImmediately,
           fileType: entry.fileType || null,
           pageCount: null,
           fileUrl,
@@ -415,6 +418,18 @@ export function ImportForm({ categories, subjects }: ImportFormProps) {
             </table>
           </div>
 
+          {/* Success banner */}
+          {doneCount > 0 && !isImporting && (
+            <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 flex items-center justify-between">
+              <p className="text-sm text-green-700">
+                {doneCount} resource{doneCount !== 1 ? "s" : ""} imported successfully.
+              </p>
+              <Link href="/dashboard/resources" className="text-sm font-medium text-green-700 underline underline-offset-2 hover:text-green-900">
+                View My Resources
+              </Link>
+            </div>
+          )}
+
           {/* Error summary */}
           {errorEntries.length > 0 && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-3 space-y-1">
@@ -430,13 +445,24 @@ export function ImportForm({ categories, subjects }: ImportFormProps) {
           )}
 
           <div className="flex items-center justify-between">
-            <p className="text-xs text-amber-600">
-              {readyCount < pendingCount && pendingCount > 0
-                ? `${pendingCount - readyCount} file${
-                    pendingCount - readyCount !== 1 ? "s" : ""
-                  } missing a category.`
-                : ""}
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="text-xs text-amber-600">
+                {readyCount < pendingCount && pendingCount > 0
+                  ? `${pendingCount - readyCount} file${
+                      pendingCount - readyCount !== 1 ? "s" : ""
+                    } missing a category.`
+                  : ""}
+              </p>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={publishImmediately}
+                  onChange={(e) => setPublishImmediately(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                />
+                <span className="text-sm text-gray-600">Publish immediately</span>
+              </label>
+            </div>
             <Button onClick={handleImport} disabled={isImporting || readyCount === 0}>
               {isImporting
                 ? "Importing…"

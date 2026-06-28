@@ -1,79 +1,61 @@
 export const dynamic = "force-dynamic";
 
-import { Suspense } from "react";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { searchResources } from "@/actions/resources";
-import { SearchBar } from "@/components/search-bar";
-import { CategoryFilter } from "@/components/category-filter";
-import { SubjectFilter } from "@/components/subject-filter";
-import { ResourceGrid } from "@/components/resource-grid";
-import type { Resource, Category, Subject, User } from "@/generated/prisma/client";
+import { ResourcesBrowser } from "@/components/resources-browser";
 
 export const metadata = {
   title: "Browse Resources — AcademicArchive",
   description: "Search and browse academic resources",
 };
 
-type ResourceWithRelations = Resource & {
-  category: Category;
-  subject: Subject | null;
-  createdBy: Pick<User, "id" | "fullName" | "email">;
-};
+const getCachedCategories = unstable_cache(
+  () => prisma.category.findMany({ orderBy: { name: "asc" } }),
+  ["categories"],
+  { tags: ["categories"], revalidate: 3600 }
+);
 
-async function ResourceResults({
-  query,
-  categorySlug,
-  subjectSlug,
+const getCachedSubjects = unstable_cache(
+  () => prisma.subject.findMany({ orderBy: { name: "asc" } }),
+  ["subjects"],
+  { tags: ["subjects"], revalidate: 3600 }
+);
+
+export default async function ResourcesPage({
+  searchParams,
 }: {
-  query?: string;
-  categorySlug?: string;
-  subjectSlug?: string;
+  searchParams: Promise<{ q?: string; category?: string; subject?: string; sort?: string }>;
 }) {
-  let resources: ResourceWithRelations[];
+  const { q, category, subject, sort } = await searchParams;
 
-  if (query) {
-    const searchResults = await searchResources(query);
-    const resourceIds = searchResults.map((r) => r.id);
-    resources = await prisma.resource.findMany({
-      where: { id: { in: resourceIds }, isPublished: true },
-      include: {
-        category: true,
-        subject: true,
-        createdBy: { select: { id: true, fullName: true, email: true } },
-      },
-    });
-    const idOrder = new Map(resourceIds.map((id, i) => [id, i]));
-    resources.sort((a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0));
-  } else {
-    resources = await prisma.resource.findMany({
-      where: {
-        isPublished: true,
-        ...(categorySlug ? { category: { slug: categorySlug } } : {}),
-        ...(subjectSlug ? { subject: { slug: subjectSlug } } : {}),
-      },
+  const [rawResources, categories, subjects] = await Promise.all([
+    prisma.resource.findMany({
+      where: { isPublished: true },
       include: {
         category: true,
         subject: true,
         createdBy: { select: { id: true, fullName: true, email: true } },
       },
       orderBy: { createdAt: "desc" },
-      take: 20,
-    });
-  }
-
-  return <ResourceGrid resources={resources} />;
-}
-
-export default async function ResourcesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string; category?: string; subject?: string }>;
-}) {
-  const { q, category, subject } = await searchParams;
-  const [categories, subjects] = await Promise.all([
-    prisma.category.findMany({ orderBy: { name: "asc" } }),
-    prisma.subject.findMany({ orderBy: { name: "asc" } }),
+    }),
+    getCachedCategories(),
+    getCachedSubjects(),
   ]);
+
+  // Prisma Decimal and Date objects can't cross the server→client boundary;
+  // convert them to plain serializable values here.
+  const resources = rawResources.map(r => ({
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    price: r.price.toString(),
+    isFree: r.isFree,
+    fileType: r.fileType,
+    createdAt: r.createdAt.toISOString(),
+    category: { name: r.category.name, slug: r.category.slug },
+    subject: r.subject ? { name: r.subject.name, slug: r.subject.slug } : null,
+    createdBy: { fullName: r.createdBy.fullName },
+  }));
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -82,24 +64,15 @@ export default async function ResourcesPage({
         <p className="mt-2 text-gray-600">Search through our collection of academic materials</p>
       </div>
 
-      <div className="space-y-4">
-        <Suspense fallback={null}><SearchBar /></Suspense>
-
-        <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4">
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Document type</p>
-            <Suspense fallback={null}><CategoryFilter categories={categories} /></Suspense>
-          </div>
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Subject</p>
-            <Suspense fallback={null}><SubjectFilter subjects={subjects} /></Suspense>
-          </div>
-        </div>
-
-        <Suspense fallback={<div className="text-center py-12 text-gray-500">Loading…</div>}>
-          <ResourceResults query={q} categorySlug={category} subjectSlug={subject} />
-        </Suspense>
-      </div>
+      <ResourcesBrowser
+        resources={resources}
+        categories={categories}
+        subjects={subjects}
+        initialCategory={category}
+        initialSubject={subject}
+        initialSort={sort}
+        initialQuery={q}
+      />
     </div>
   );
 }

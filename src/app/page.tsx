@@ -13,6 +13,7 @@ export default async function HomePage() {
     where: { isPublished: true },
     include: {
       category: true,
+      subject: true,
       createdBy: { select: { id: true, fullName: true, email: true } },
     },
     orderBy: { createdAt: "desc" },
