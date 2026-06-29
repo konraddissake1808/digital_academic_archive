@@ -1,17 +1,17 @@
 "use client";
 
-import { deleteResource } from "@/actions/publisher";
-
 export function DeleteResourceButton({
   resourceId,
   title,
+  action,
 }: {
   resourceId: string;
   title: string;
+  action: (id: string, formData: FormData) => Promise<void>;
 }) {
   async function handleClick() {
     if (!confirm(`Delete "${title}"?`)) return;
-    await deleteResource(resourceId, new FormData());
+    await action(resourceId, new FormData());
   }
 
   return (

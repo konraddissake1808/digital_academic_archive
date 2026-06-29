@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/badge";
 import { TableFilters } from "@/components/table-filters";
 import { setResourcePublished, deleteResource } from "@/actions/admin";
+import { DeleteResourceButton } from "@/components/dashboard/delete-resource-button";
 
 export default async function AdminResourcesPage({
   searchParams,
@@ -74,15 +75,7 @@ export default async function AdminResourcesPage({
                         {resource.isPublished ? "Unpublish" : "Publish"}
                       </button>
                     </form>
-                    <form action={deleteResource.bind(null, resource.id)}>
-                      <button
-                        type="submit"
-                        className="text-xs font-medium text-red-600 hover:underline"
-                        onClick={(e) => { if (!confirm(`Delete "${resource.title}"?`)) e.preventDefault(); }}
-                      >
-                        Delete
-                      </button>
-                    </form>
+                    <DeleteResourceButton resourceId={resource.id} title={resource.title} action={deleteResource} />
                   </div>
                 </td>
               </tr>

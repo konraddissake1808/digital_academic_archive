@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TableFilters } from "@/components/table-filters";
 import { formatPrice } from "@/lib/utils";
-import { setPublished } from "@/actions/publisher";
+import { setPublished, deleteResource } from "@/actions/publisher";
 import { DeleteResourceButton } from "@/components/dashboard/delete-resource-button";
 
 export default async function DashboardResourcesPage({
@@ -111,7 +111,7 @@ export default async function DashboardResourcesPage({
                           {resource.isPublished ? "Unpublish" : "Publish"}
                         </button>
                       </form>
-                      <DeleteResourceButton resourceId={resource.id} title={resource.title} />
+                      <DeleteResourceButton resourceId={resource.id} title={resource.title} action={deleteResource} />
                     </div>
                   </td>
                 </tr>
