@@ -50,14 +50,14 @@ export async function createCategory(formData: FormData) {
   const slug = (formData.get("slug") as string).trim();
   const description = (formData.get("description") as string).trim() || null;
   await prisma.category.create({ data: { name, slug, description } });
-  revalidateTag("categories");
+  revalidateTag("categories", "max");
   revalidatePath("/admin/categories");
 }
 
 export async function deleteCategory(categoryId: string, _formData: FormData) {
   await requireAdmin();
   await prisma.category.delete({ where: { id: categoryId } });
-  revalidateTag("categories");
+  revalidateTag("categories", "max");
   revalidatePath("/admin/categories");
 }
 
@@ -67,13 +67,13 @@ export async function createSubject(formData: FormData) {
   const slug = (formData.get("slug") as string).trim();
   const description = (formData.get("description") as string).trim() || null;
   await prisma.subject.create({ data: { name, slug, description } });
-  revalidateTag("subjects");
+  revalidateTag("subjects", "max");
   revalidatePath("/admin/subjects");
 }
 
 export async function deleteSubject(subjectId: string, _formData: FormData) {
   await requireAdmin();
   await prisma.subject.delete({ where: { id: subjectId } });
-  revalidateTag("subjects");
+  revalidateTag("subjects", "max");
   revalidatePath("/admin/subjects");
 }
