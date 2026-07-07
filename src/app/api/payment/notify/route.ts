@@ -1,41 +1,51 @@
 import { prisma } from "@/lib/prisma";
-import { cinetpayCheck } from "@/lib/cinetpay";
+import { campayCheck } from "@/lib/campay";
 
-// CinetPay sends a POST to this URL when a payment status changes.
-// We verify the status with CinetPay rather than trusting the request body.
+// CamPay sends a POST to the app's configured webhook URL when a payment status changes.
+// We verify the status with CamPay rather than trusting the request body.
 export async function POST(request: Request) {
   try {
-    // CinetPay may send JSON or form-encoded data depending on the account config
-    let transactionId: string | null = null;
+    let campayReference: string | null = null;
+    let externalReference: string | null = null;
 
     const contentType = request.headers.get("content-type") ?? "";
     if (contentType.includes("application/json")) {
       const body = await request.json();
-      transactionId = body.cpm_trans_id ?? body.transaction_id ?? null;
+      campayReference = body.reference ?? null;
+      externalReference = body.external_reference ?? null;
     } else {
       const form = await request.formData();
-      transactionId = (form.get("cpm_trans_id") ?? form.get("transaction_id") ?? null) as string | null;
+      campayReference = (form.get("reference") ?? null) as string | null;
+      externalReference = (form.get("external_reference") ?? null) as string | null;
     }
 
-    if (!transactionId) {
-      return Response.json({ error: "Missing transaction_id" }, { status: 400 });
+    if (!campayReference && !externalReference) {
+      return Response.json({ error: "Missing reference" }, { status: 400 });
     }
 
-    const { status } = await cinetpayCheck(transactionId);
+    const purchase = campayReference
+      ? await prisma.purchase.findUnique({ where: { campayReference } })
+      : await prisma.purchase.findUnique({ where: { externalReference: externalReference! } });
+
+    if (!purchase?.campayReference) {
+      return Response.json({ error: "Purchase not found" }, { status: 404 });
+    }
+
+    const { status } = await campayCheck(purchase.campayReference);
 
     const newStatus =
-      status === "ACCEPTED" ? "PAID" :
-      status === "REFUSED" || status === "CANCELLED" ? "FAILED" :
+      status === "SUCCESSFUL" ? "PAID" :
+      status === "FAILED" ? "FAILED" :
       "PENDING";
 
-    await prisma.purchase.updateMany({
-      where: { cinetpayTransactionId: transactionId },
+    await prisma.purchase.update({
+      where: { id: purchase.id },
       data: { status: newStatus },
     });
 
     return Response.json({ ok: true });
   } catch (err) {
-    console.error("[cinetpay/notify]", err);
+    console.error("[campay/notify]", err);
     return Response.json({ error: "Internal error" }, { status: 500 });
   }
 }

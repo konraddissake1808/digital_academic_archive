@@ -66,14 +66,14 @@ model Resource {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  categoryId  String   @map("category_id") @db.Uuid
-  category    Category @relation(fields: [categoryId], references: [id])
+  categoryId String   @map("category_id") @db.Uuid
+  category   Category @relation(fields: [categoryId], references: [id])
 
-  subjectId   String?  @map("subject_id") @db.Uuid
-  subject     Subject? @relation(fields: [subjectId], references: [id])
+  subjectId String?  @map("subject_id") @db.Uuid
+  subject   Subject? @relation(fields: [subjectId], references: [id])
 
-  createdById String   @map("created_by_id") @db.Uuid
-  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdById String @map("created_by_id") @db.Uuid
+  createdBy   User   @relation(fields: [createdById], references: [id])
 
   purchases Purchase[]
 
@@ -81,13 +81,14 @@ model Resource {
 }
 
 model Purchase {
-  id                    String   @id @default(uuid()) @db.Uuid
-  userId                String   @map("user_id") @db.Uuid
-  resourceId            String   @map("resource_id") @db.Uuid
-  amountPaid            Decimal  @map("amount_paid") @db.Decimal(10, 2)
-  cinetpayTransactionId String?  @unique @map("cinetpay_transaction_id")
-  status                String   @default("PENDING")
-  createdAt             DateTime @default(now()) @map("created_at")
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  resourceId        String   @map("resource_id") @db.Uuid
+  amountPaid        Decimal  @map("amount_paid") @db.Decimal(10, 2)
+  externalReference String?  @unique @map("external_reference")
+  campayReference   String?  @unique @map("campay_reference")
+  status            String   @default("PENDING")
+  createdAt         DateTime @default(now()) @map("created_at")
 
   user     User     @relation(fields: [userId], references: [id])
   resource Resource @relation(fields: [resourceId], references: [id])

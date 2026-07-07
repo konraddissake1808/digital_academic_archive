@@ -5,16 +5,16 @@ import { Button } from "@/components/ui/button";
 export default async function PaymentReturnPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tid?: string }>;
+  searchParams: Promise<{ ref?: string }>;
 }) {
-  const { tid } = await searchParams;
+  const { ref } = await searchParams;
 
-  if (!tid) {
+  if (!ref) {
     return <ReturnLayout status="error" message="Invalid payment link." />;
   }
 
   const purchase = await prisma.purchase.findUnique({
-    where: { cinetpayTransactionId: tid },
+    where: { externalReference: ref },
     include: { resource: { select: { id: true, title: true } } },
   });
 
