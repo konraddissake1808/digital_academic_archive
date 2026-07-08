@@ -13,17 +13,24 @@ enum Role {
   ADMIN
 }
 
+enum Tier {
+  FREE
+  PREMIUM
+}
+
 model User {
   id        String   @id @default(uuid()) @db.Uuid
   email     String   @unique
   fullName  String?  @map("full_name")
   role      Role     @default(STUDENT)
+  tier      Tier     @default(FREE)
   avatarUrl String?  @map("avatar_url")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   resources Resource[]
   purchases Purchase[]
+  downloads DownloadLog[]
 
   @@map("users")
 }
@@ -76,6 +83,7 @@ model Resource {
   createdBy   User   @relation(fields: [createdById], references: [id])
 
   purchases Purchase[]
+  downloads DownloadLog[]
 
   @@map("resources")
 }
@@ -95,4 +103,20 @@ model Purchase {
 
   @@unique([userId, resourceId])
   @@map("purchases")
+}
+
+// Records every successful resource download. Used to enforce the FREE tier's
+// weekly cap on free-resource downloads (PREMIUM users are exempt) — see
+// src/app/api/resources/[id]/download/route.ts.
+model DownloadLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  resourceId   String   @map("resource_id") @db.Uuid
+  downloadedAt DateTime @default(now()) @map("downloaded_at")
+
+  user     User     @relation(fields: [userId], references: [id])
+  resource Resource @relation(fields: [resourceId], references: [id])
+
+  @@index([userId, downloadedAt])
+  @@map("download_logs")
 }

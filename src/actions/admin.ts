@@ -4,7 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
-import type { Role } from "@/types";
+import type { Role, Tier } from "@/types";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -24,6 +24,13 @@ export async function updateUserRole(userId: string, formData: FormData) {
   revalidatePath("/admin/users");
 }
 
+export async function updateUserTier(userId: string, formData: FormData) {
+  await requireAdmin();
+  const tier = formData.get("tier") as Tier;
+  await prisma.user.update({ where: { id: userId }, data: { tier } });
+  revalidatePath("/admin/users");
+}
+
 export async function setResourcePublished(
   resourceId: string,
   published: boolean,
@@ -40,6 +47,7 @@ export async function setResourcePublished(
 export async function deleteResource(resourceId: string, _formData: FormData) {
   await requireAdmin();
   await prisma.purchase.deleteMany({ where: { resourceId } });
+  await prisma.downloadLog.deleteMany({ where: { resourceId } });
   await prisma.resource.delete({ where: { id: resourceId } });
   revalidatePath("/admin/resources");
 }

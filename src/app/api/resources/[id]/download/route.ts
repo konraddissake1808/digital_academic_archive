@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { prisma } from "@/lib/prisma";
+import { WEEKLY_FREE_DOWNLOAD_LIMIT, getWeeklyFreeDownloadCount } from "@/lib/download-limits";
 
 function getAdminClient() {
   return createAdminClient(
@@ -32,8 +33,9 @@ export async function GET(
     return NextResponse.json({ error: "Sign in to download this resource" }, { status: 401 });
   }
 
-  const [resource, purchase] = await Promise.all([
+  const [resource, dbUser, purchase] = await Promise.all([
     prisma.resource.findUnique({ where: { id, isPublished: true } }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { tier: true } }),
     prisma.purchase.findUnique({
       where: { userId_resourceId: { userId: user.id, resourceId: id } },
       select: { status: true },
@@ -44,9 +46,26 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const canAccess = resource.isFree || purchase?.status === "PAID";
-  if (!canAccess) {
+  const isPremium = dbUser?.tier === "PREMIUM";
+  const hasPurchased = purchase?.status === "PAID";
+
+  // PREMIUM unlocks every resource with no cap. Otherwise, paid resources
+  // still require an existing purchase.
+  if (!resource.isFree && !hasPurchased && !isPremium) {
     return NextResponse.json({ error: "Purchase required" }, { status: 403 });
+  }
+
+  // FREE-tier users are capped on free-resource downloads per week.
+  if (!isPremium && resource.isFree) {
+    const count = await getWeeklyFreeDownloadCount(user.id);
+    if (count >= WEEKLY_FREE_DOWNLOAD_LIMIT) {
+      return NextResponse.json(
+        {
+          error: `You've reached your ${WEEKLY_FREE_DOWNLOAD_LIMIT} free downloads this week. Upgrade to Premium for unlimited downloads.`,
+        },
+        { status: 429 }
+      );
+    }
   }
 
   const path = extractStoragePath(resource.fileUrl);
@@ -59,6 +78,8 @@ export async function GET(
     console.error("[download] Could not create signed URL:", error);
     return NextResponse.json({ error: "Could not generate download link" }, { status: 500 });
   }
+
+  await prisma.downloadLog.create({ data: { userId: user.id, resourceId: resource.id } });
 
   return NextResponse.redirect(signed.signedUrl);
 }

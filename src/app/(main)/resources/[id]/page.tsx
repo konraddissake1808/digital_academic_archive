@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PurchaseButton } from "@/components/purchase-button";
 import { formatPrice } from "@/lib/utils";
+import { WEEKLY_FREE_DOWNLOAD_LIMIT, getWeeklyFreeDownloadCount } from "@/lib/download-limits";
 
 export async function generateMetadata({
   params,
@@ -36,7 +37,7 @@ export default async function ResourceDetailPage({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [resource, purchase] = await Promise.all([
+  const [resource, dbUser, purchase] = await Promise.all([
     prisma.resource.findUnique({
       where: { id, isPublished: true },
       include: {
@@ -45,6 +46,7 @@ export default async function ResourceDetailPage({
         createdBy: { select: { id: true, fullName: true, email: true } },
       },
     }),
+    user ? prisma.user.findUnique({ where: { id: user.id }, select: { tier: true } }) : null,
     user
       ? prisma.purchase.findUnique({
           where: { userId_resourceId: { userId: user.id, resourceId: id } },
@@ -55,8 +57,16 @@ export default async function ResourceDetailPage({
 
   if (!resource) notFound();
 
+  const isPremium = dbUser?.tier === "PREMIUM";
   const hasPurchased = purchase?.status === "PAID";
-  const canAccess = !!user && (resource.isFree || hasPurchased);
+  const canAccess = !!user && (resource.isFree || hasPurchased || isPremium);
+
+  let weeklyLimitReached = false;
+  let weeklyUsed = 0;
+  if (user && !isPremium && resource.isFree) {
+    weeklyUsed = await getWeeklyFreeDownloadCount(user.id);
+    weeklyLimitReached = weeklyUsed >= WEEKLY_FREE_DOWNLOAD_LIMIT;
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
@@ -102,23 +112,35 @@ export default async function ResourceDetailPage({
           </div>
         </div>
 
-        <div className="border-t border-gray-200 bg-gray-50 px-8 py-6 flex items-center justify-between gap-4 flex-wrap">
-          <p className="text-2xl font-bold text-gray-900">{formatPrice(resource.price)}</p>
+        <div className="border-t border-gray-200 bg-gray-50 px-8 py-6 space-y-3">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-2xl font-bold text-gray-900">{formatPrice(resource.price)}</p>
 
-          {canAccess && resource.fileUrl ? (
-            <a href={`/api/resources/${resource.id}/download`} target="_blank" rel="noopener noreferrer">
-              <Button size="lg">Download</Button>
-            </a>
-          ) : canAccess ? (
-            <Button size="lg" disabled>No file available yet</Button>
-          ) : !user ? (
-            <Link href={`/login?next=/resources/${resource.id}`}>
-              <Button size="lg">
-                {resource.isFree ? "Sign in to Download" : "Sign in to Purchase"}
-              </Button>
-            </Link>
-          ) : (
-            <PurchaseButton resourceId={resource.id} />
+            {canAccess && resource.fileUrl && !weeklyLimitReached ? (
+              <a href={`/api/resources/${resource.id}/download`} target="_blank" rel="noopener noreferrer">
+                <Button size="lg">Download</Button>
+              </a>
+            ) : canAccess && weeklyLimitReached ? (
+              <Button size="lg" disabled>Weekly limit reached</Button>
+            ) : canAccess ? (
+              <Button size="lg" disabled>No file available yet</Button>
+            ) : !user ? (
+              <Link href={`/login?next=/resources/${resource.id}`}>
+                <Button size="lg">
+                  {resource.isFree ? "Sign in to Download" : "Sign in to Purchase"}
+                </Button>
+              </Link>
+            ) : (
+              <PurchaseButton resourceId={resource.id} />
+            )}
+          </div>
+
+          {user && !isPremium && resource.isFree && (
+            <p className="text-xs text-gray-500">
+              {weeklyLimitReached
+                ? `You've used all ${WEEKLY_FREE_DOWNLOAD_LIMIT} free downloads this week. Upgrade to Premium for unlimited downloads, or check back next week.`
+                : `${weeklyUsed}/${WEEKLY_FREE_DOWNLOAD_LIMIT} free downloads used this week`}
+            </p>
           )}
         </div>
       </div>

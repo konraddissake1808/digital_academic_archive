@@ -76,6 +76,7 @@ export async function deleteResource(resourceId: string, _formData: FormData) {
       ? { id: resourceId }
       : { id: resourceId, createdById: user.id };
   await prisma.purchase.deleteMany({ where: { resourceId } });
+  await prisma.downloadLog.deleteMany({ where: { resourceId } });
   await prisma.resource.delete({ where });
   revalidatePath("/dashboard/resources");
 }

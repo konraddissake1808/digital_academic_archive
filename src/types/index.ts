@@ -1,4 +1,4 @@
-export type { User, Category, Subject, Resource, Purchase, Role } from "@/generated/prisma/client";
+export type { User, Category, Subject, Resource, Purchase, Role, Tier } from "@/generated/prisma/client";
 
 export type ResourceWithRelations = {
   id: string;
