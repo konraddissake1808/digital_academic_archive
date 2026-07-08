@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { ReturnLayout } from "@/components/return-layout";
 
-export default async function PaymentReturnPage({
+export default async function PremiumReturnPage({
   searchParams,
 }: {
   searchParams: Promise<{ ref?: string }>;
@@ -14,9 +14,8 @@ export default async function PaymentReturnPage({
     return <ReturnLayout status="error" message="Invalid payment link." />;
   }
 
-  const purchase = await prisma.purchase.findUnique({
+  const purchase = await prisma.subscriptionPurchase.findUnique({
     where: { externalReference: ref },
-    include: { resource: { select: { id: true, title: true } } },
   });
 
   if (!purchase) {
@@ -25,13 +24,13 @@ export default async function PaymentReturnPage({
 
   if (purchase.status === "PAID") {
     return (
-      <ReturnLayout status="success" message={`You now have access to "${purchase.resource.title}".`}>
+      <ReturnLayout status="success" message="You're now Premium — enjoy unlimited downloads.">
         <div className="flex gap-3 justify-center">
-          <Link href={`/resources/${purchase.resource.id}`}>
-            <Button>View Resource</Button>
+          <Link href="/premium">
+            <Button>View Premium Status</Button>
           </Link>
           <Link href="/resources">
-            <Button variant="secondary">Browse More</Button>
+            <Button variant="secondary">Browse Resources</Button>
           </Link>
         </div>
       </ReturnLayout>
@@ -41,7 +40,7 @@ export default async function PaymentReturnPage({
   if (purchase.status === "FAILED") {
     return (
       <ReturnLayout status="error" message="Payment was declined or cancelled.">
-        <Link href={`/resources/${purchase.resource.id}`}>
+        <Link href="/premium">
           <Button variant="secondary">Try Again</Button>
         </Link>
       </ReturnLayout>
@@ -51,8 +50,8 @@ export default async function PaymentReturnPage({
   // PENDING — payment may still be processing (webhook hasn't fired yet)
   return (
     <ReturnLayout status="pending" message="Your payment is being processed. Check back in a moment.">
-      <Link href={`/resources/${purchase.resource.id}`}>
-        <Button variant="secondary">Back to Resource</Button>
+      <Link href="/premium">
+        <Button variant="secondary">Back to Premium</Button>
       </Link>
     </ReturnLayout>
   );

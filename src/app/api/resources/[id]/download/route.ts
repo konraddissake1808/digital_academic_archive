@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { prisma } from "@/lib/prisma";
 import { WEEKLY_FREE_DOWNLOAD_LIMIT, getWeeklyFreeDownloadCount } from "@/lib/download-limits";
+import { isPremiumActive } from "@/lib/subscription";
 
 function getAdminClient() {
   return createAdminClient(
@@ -35,7 +36,7 @@ export async function GET(
 
   const [resource, dbUser, purchase] = await Promise.all([
     prisma.resource.findUnique({ where: { id, isPublished: true } }),
-    prisma.user.findUnique({ where: { id: user.id }, select: { tier: true } }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { tier: true, premiumExpiresAt: true } }),
     prisma.purchase.findUnique({
       where: { userId_resourceId: { userId: user.id, resourceId: id } },
       select: { status: true },
@@ -46,7 +47,7 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const isPremium = dbUser?.tier === "PREMIUM";
+  const isPremium = !!dbUser && isPremiumActive(dbUser);
   const hasPurchased = purchase?.status === "PAID";
 
   // PREMIUM unlocks every resource with no cap. Otherwise, paid resources

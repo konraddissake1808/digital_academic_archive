@@ -70,6 +70,12 @@ export function Navbar() {
               >
                 Browse
               </Link>
+              <Link
+                href="/premium"
+                className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Premium
+              </Link>
             </div>
           </div>
 
@@ -136,6 +142,13 @@ export function Navbar() {
               onClick={() => setMenuOpen(false)}
             >
               Browse
+            </Link>
+            <Link
+              href="/premium"
+              className="block text-sm text-gray-600 hover:text-gray-900"
+              onClick={() => setMenuOpen(false)}
+            >
+              Premium
             </Link>
             {user ? (
               <>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PurchaseButton } from "@/components/purchase-button";
 import { formatPrice } from "@/lib/utils";
 import { WEEKLY_FREE_DOWNLOAD_LIMIT, getWeeklyFreeDownloadCount } from "@/lib/download-limits";
+import { isPremiumActive } from "@/lib/subscription";
 
 export async function generateMetadata({
   params,
@@ -46,7 +47,9 @@ export default async function ResourceDetailPage({
         createdBy: { select: { id: true, fullName: true, email: true } },
       },
     }),
-    user ? prisma.user.findUnique({ where: { id: user.id }, select: { tier: true } }) : null,
+    user
+      ? prisma.user.findUnique({ where: { id: user.id }, select: { tier: true, premiumExpiresAt: true } })
+      : null,
     user
       ? prisma.purchase.findUnique({
           where: { userId_resourceId: { userId: user.id, resourceId: id } },
@@ -57,7 +60,7 @@ export default async function ResourceDetailPage({
 
   if (!resource) notFound();
 
-  const isPremium = dbUser?.tier === "PREMIUM";
+  const isPremium = !!dbUser && isPremiumActive(dbUser);
   const hasPurchased = purchase?.status === "PAID";
   const canAccess = !!user && (resource.isFree || hasPurchased || isPremium);
 
@@ -90,6 +93,7 @@ export default async function ResourceDetailPage({
               {resource.isFree ? "Free" : formatPrice(resource.price)}
             </Badge>
             {hasPurchased && <Badge variant="success">Purchased</Badge>}
+            {isPremium && <Badge variant="info">Premium</Badge>}
           </div>
 
           <h1 className="text-3xl font-bold text-gray-900 mb-4">{resource.title}</h1>
@@ -137,9 +141,17 @@ export default async function ResourceDetailPage({
 
           {user && !isPremium && resource.isFree && (
             <p className="text-xs text-gray-500">
-              {weeklyLimitReached
-                ? `You've used all ${WEEKLY_FREE_DOWNLOAD_LIMIT} free downloads this week. Upgrade to Premium for unlimited downloads, or check back next week.`
-                : `${weeklyUsed}/${WEEKLY_FREE_DOWNLOAD_LIMIT} free downloads used this week`}
+              {weeklyLimitReached ? (
+                <>
+                  You&apos;ve used all {WEEKLY_FREE_DOWNLOAD_LIMIT} free downloads this week.{" "}
+                  <Link href="/premium" className="text-blue-600 hover:underline">
+                    Upgrade to Premium
+                  </Link>{" "}
+                  for unlimited downloads, or check back next week.
+                </>
+              ) : (
+                `${weeklyUsed}/${WEEKLY_FREE_DOWNLOAD_LIMIT} free downloads used this week`
+              )}
             </p>
           )}
         </div>

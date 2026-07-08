@@ -19,18 +19,22 @@ enum Tier {
 }
 
 model User {
-  id        String   @id @default(uuid()) @db.Uuid
-  email     String   @unique
-  fullName  String?  @map("full_name")
-  role      Role     @default(STUDENT)
-  tier      Tier     @default(FREE)
-  avatarUrl String?  @map("avatar_url")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id               String    @id @default(uuid()) @db.Uuid
+  email            String    @unique
+  fullName         String?   @map("full_name")
+  role             Role      @default(STUDENT)
+  tier             Tier      @default(FREE)
+  // Null means no expiry (e.g. admin-granted premium). Set on purchased
+  // subscriptions — see src/lib/subscription.ts.
+  premiumExpiresAt DateTime? @map("premium_expires_at")
+  avatarUrl        String?   @map("avatar_url")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  resources Resource[]
-  purchases Purchase[]
-  downloads DownloadLog[]
+  resources             Resource[]
+  purchases             Purchase[]
+  downloads             DownloadLog[]
+  subscriptionPurchases SubscriptionPurchase[]
 
   @@map("users")
 }
@@ -103,6 +107,25 @@ model Purchase {
 
   @@unique([userId, resourceId])
   @@map("purchases")
+}
+
+// A Premium subscription purchase via CamPay. CamPay only supports one-off
+// collections, not recurring billing, so "subscription" here means a
+// time-boxed grant — see src/lib/subscription.ts for the price/duration and
+// the grant/extend logic applied once CamPay confirms payment.
+model SubscriptionPurchase {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  amountPaid        Decimal  @map("amount_paid") @db.Decimal(10, 2)
+  durationDays      Int      @map("duration_days")
+  externalReference String?  @unique @map("external_reference")
+  campayReference   String?  @unique @map("campay_reference")
+  status            String   @default("PENDING")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("subscription_purchases")
 }
 
 // Records every successful resource download. Used to enforce the FREE tier's
