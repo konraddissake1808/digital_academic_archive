@@ -10,6 +10,6 @@ export function formatPrice(price: number | string | { toString(): string }): st
   if (num === 0) return "Free";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: "XAF",
   }).format(num);
 }

@@ -21,6 +21,13 @@ export function DashboardSidebar() {
         </span>
       </div>
       <nav className="flex-1 p-3 space-y-1">
+        <Link
+          href="/resources"
+          className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+        >
+          ← Browse Resources
+        </Link>
+        <div className="my-2 border-t border-gray-100" />
         {links.map((link) => (
           <Link
             key={link.href}

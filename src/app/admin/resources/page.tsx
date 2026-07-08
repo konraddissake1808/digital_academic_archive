@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { TableFilters } from "@/components/table-filters";
 import { setResourcePublished, deleteResource } from "@/actions/admin";
 import { DeleteResourceButton } from "@/components/dashboard/delete-resource-button";
+import { formatPrice } from "@/lib/utils";
 
 export default async function AdminResourcesPage({
   searchParams,
@@ -61,7 +62,7 @@ export default async function AdminResourcesPage({
                   {resource.createdBy.fullName ?? resource.createdBy.email}
                 </td>
                 <td className="px-4 py-3 text-gray-700">
-                  {resource.isFree ? "Free" : `$${Number(resource.price).toFixed(2)}`}
+                  {resource.isFree ? "Free" : formatPrice(resource.price)}
                 </td>
                 <td className="px-4 py-3">
                   <Badge variant={resource.isPublished ? "success" : "default"}>

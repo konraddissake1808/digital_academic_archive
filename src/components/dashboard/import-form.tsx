@@ -397,9 +397,9 @@ export function ImportForm({ categories, subjects }: ImportFormProps) {
                               patch(entry.id, { price: e.target.value })
                             }
                             disabled={locked}
-                            min="0.01"
-                            step="0.01"
-                            placeholder="9.99"
+                            min="1"
+                            step="1"
+                            placeholder="5000"
                             className={inputClass}
                           />
                         ) : (

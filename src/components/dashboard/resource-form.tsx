@@ -168,13 +168,13 @@ export function ResourceForm({ categories, subjects, initialData }: ResourceForm
         </label>
         {!isFree && (
           <Input
-            label="Price (USD)"
+            label="Price (XAF)"
             type="number"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            min="0.01"
-            step="0.01"
-            placeholder="9.99"
+            min="1"
+            step="1"
+            placeholder="5000"
             required
           />
         )}
