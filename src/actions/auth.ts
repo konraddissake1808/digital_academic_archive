@@ -3,12 +3,19 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import type { Role } from "@/types";
+
+const SIGNUP_ROLES: readonly Role[] = ["STUDENT", "PUBLISHER"];
 
 export async function signUp(formData: FormData) {
   const supabase = await createClient();
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const fullName = formData.get("fullName") as string;
+  const requestedRole = formData.get("role") as string;
+  const role: Role = SIGNUP_ROLES.includes(requestedRole as Role)
+    ? (requestedRole as Role)
+    : "STUDENT";
 
   const { data, error } = await supabase.auth.signUp({ email, password });
 
@@ -22,7 +29,7 @@ export async function signUp(formData: FormData) {
         id: data.user.id,
         email: data.user.email!,
         fullName,
-        role: "STUDENT",
+        role,
       },
     });
   }
