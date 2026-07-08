@@ -12,8 +12,13 @@ export function PurchaseButton({ resourceId }: { resourceId: string }) {
     setLoading(true);
     setError(null);
     try {
-      const { paymentUrl } = await initiatePayment(resourceId);
-      window.location.href = paymentUrl;
+      const result = await initiatePayment(resourceId);
+      if ("error" in result) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
+      window.location.href = result.paymentUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Payment could not be initiated");
       setLoading(false);
