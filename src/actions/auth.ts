@@ -16,6 +16,8 @@ export async function signUp(formData: FormData) {
   const role: Role = SIGNUP_ROLES.includes(requestedRole as Role)
     ? (requestedRole as Role)
     : "STUDENT";
+  const institution =
+    role === "PUBLISHER" ? ((formData.get("institution") as string) || "").trim() || null : null;
 
   const { data, error } = await supabase.auth.signUp({ email, password });
 
@@ -30,6 +32,7 @@ export async function signUp(formData: FormData) {
         email: data.user.email!,
         fullName,
         role,
+        institution,
       },
     });
   }

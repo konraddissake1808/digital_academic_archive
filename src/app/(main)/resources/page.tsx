@@ -24,9 +24,9 @@ const getCachedSubjects = unstable_cache(
 export default async function ResourcesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; subject?: string; sort?: string }>;
+  searchParams: Promise<{ q?: string; category?: string; subject?: string; institution?: string; sort?: string }>;
 }) {
-  const { q, category, subject, sort } = await searchParams;
+  const { q, category, subject, institution, sort } = await searchParams;
 
   const [rawResources, categories, subjects] = await Promise.all([
     prisma.resource.findMany({
@@ -34,7 +34,7 @@ export default async function ResourcesPage({
       include: {
         category: true,
         subject: true,
-        createdBy: { select: { id: true, fullName: true, email: true } },
+        createdBy: { select: { id: true, fullName: true, email: true, institution: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -54,7 +54,7 @@ export default async function ResourcesPage({
     createdAt: r.createdAt.toISOString(),
     category: { name: r.category.name, slug: r.category.slug },
     subject: r.subject ? { name: r.subject.name, slug: r.subject.slug } : null,
-    createdBy: { fullName: r.createdBy.fullName },
+    createdBy: { fullName: r.createdBy.fullName, institution: r.createdBy.institution },
   }));
 
   return (
@@ -70,6 +70,7 @@ export default async function ResourcesPage({
         subjects={subjects}
         initialCategory={category}
         initialSubject={subject}
+        initialInstitution={institution}
         initialSort={sort}
         initialQuery={q}
       />

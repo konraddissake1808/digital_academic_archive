@@ -13,6 +13,7 @@ interface ResourceCardProps {
   subjectName?: string | null;
   fileType?: string | null;
   authorName?: string | null;
+  institution?: string | null;
 }
 
 export function ResourceCard({
@@ -25,6 +26,7 @@ export function ResourceCard({
   subjectName,
   fileType,
   authorName,
+  institution,
 }: ResourceCardProps) {
   return (
     <Link href={`/resources/${id}`}>
@@ -45,7 +47,12 @@ export function ResourceCard({
           <span className={`text-sm font-medium ${isFree ? "text-green-600" : "text-gray-900"}`}>
             {formatPrice(price)}
           </span>
-          {authorName && <span className="text-xs text-gray-500">by {authorName}</span>}
+          {authorName && (
+            <span className="text-xs text-gray-500">
+              by {authorName}
+              {institution && <> · {institution}</>}
+            </span>
+          )}
         </CardFooter>
       </Card>
     </Link>

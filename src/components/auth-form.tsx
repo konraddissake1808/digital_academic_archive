@@ -7,6 +7,7 @@ import { signIn, signUp } from "@/actions/auth";
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [role, setRole] = useState("STUDENT");
 
   async function handleSubmit(formData: FormData) {
     setError(null);
@@ -52,13 +53,33 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             <select
               id="role"
               name="role"
-              defaultValue="STUDENT"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="STUDENT">Student</option>
               <option value="PUBLISHER">Teacher</option>
             </select>
           </div>
+
+          {role === "PUBLISHER" && (
+            <div>
+              <label
+                htmlFor="institution"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Institution
+              </label>
+              <input
+                id="institution"
+                name="institution"
+                type="text"
+                required
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="University of Yaoundé I"
+              />
+            </div>
+          )}
         </>
       )}
 

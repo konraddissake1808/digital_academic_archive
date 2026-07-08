@@ -43,6 +43,9 @@ export default async function AdminUsersPage() {
                 <td className="px-4 py-3">
                   <p className="font-medium text-gray-900">{user.fullName ?? "—"}</p>
                   <p className="text-gray-500">{user.email}</p>
+                  {user.institution && (
+                    <p className="text-xs text-gray-400">{user.institution}</p>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <Badge variant={roleBadge[user.role]}>{user.role}</Badge>

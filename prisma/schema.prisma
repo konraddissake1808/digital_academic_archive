@@ -22,6 +22,9 @@ model User {
   id               String    @id @default(uuid()) @db.Uuid
   email            String    @unique
   fullName         String?   @map("full_name")
+  // Set at signup for teacher (PUBLISHER) accounts — lets readers filter
+  // resources by the publishing teacher's institution.
+  institution      String?
   role             Role      @default(STUDENT)
   tier             Tier      @default(FREE)
   // Null means no expiry (e.g. admin-granted premium). Set on purchased

@@ -44,7 +44,7 @@ export default async function ResourceDetailPage({
       include: {
         category: true,
         subject: true,
-        createdBy: { select: { id: true, fullName: true, email: true } },
+        createdBy: { select: { id: true, fullName: true, email: true, institution: true } },
       },
     }),
     user
@@ -99,7 +99,12 @@ export default async function ResourceDetailPage({
           <h1 className="text-3xl font-bold text-gray-900 mb-4">{resource.title}</h1>
 
           <div className="flex items-center gap-4 text-sm text-gray-500 mb-8">
-            {resource.createdBy.fullName && <span>By {resource.createdBy.fullName}</span>}
+            {resource.createdBy.fullName && (
+              <span>
+                By {resource.createdBy.fullName}
+                {resource.createdBy.institution && <> · {resource.createdBy.institution}</>}
+              </span>
+            )}
             <span>
               Published{" "}
               {resource.createdAt.toLocaleDateString("en-US", {

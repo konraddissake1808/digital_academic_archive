@@ -16,7 +16,7 @@ interface Resource {
   createdAt: Date | string;
   category: { name: string; slug: string };
   subject: { name: string; slug: string } | null;
-  createdBy: { fullName: string | null };
+  createdBy: { fullName: string | null; institution: string | null };
 }
 
 const SORT_OPTIONS = [
@@ -32,6 +32,7 @@ export function ResourcesBrowser({
   subjects,
   initialCategory,
   initialSubject,
+  initialInstitution,
   initialSort = "newest",
   initialQuery = "",
 }: {
@@ -40,19 +41,29 @@ export function ResourcesBrowser({
   subjects: Subject[];
   initialCategory?: string;
   initialSubject?: string;
+  initialInstitution?: string;
   initialSort?: string;
   initialQuery?: string;
 }) {
   const [activeCategory, setActiveCategory] = useState(initialCategory ?? null);
   const [activeSubject,  setActiveSubject]  = useState(initialSubject  ?? null);
+  const [activeInstitution, setActiveInstitution] = useState(initialInstitution ?? null);
   const [sort,  setSort]  = useState(initialSort);
   const [query, setQuery] = useState(initialQuery);
+
+  const institutions = useMemo(() => {
+    const names = resources
+      .map(r => r.createdBy.institution)
+      .filter((name): name is string => !!name);
+    return [...new Set(names)].sort((a, b) => a.localeCompare(b));
+  }, [resources]);
 
   const filtered = useMemo(() => {
     let result = resources;
 
     if (activeCategory) result = result.filter(r => r.category.slug === activeCategory);
     if (activeSubject)  result = result.filter(r => r.subject?.slug  === activeSubject);
+    if (activeInstitution) result = result.filter(r => r.createdBy.institution === activeInstitution);
 
     if (query.trim()) {
       const q = query.toLowerCase();
@@ -69,7 +80,7 @@ export function ResourcesBrowser({
         default:       return new Date(String(b.createdAt)).getTime() - new Date(String(a.createdAt)).getTime();
       }
     });
-  }, [resources, activeCategory, activeSubject, sort, query]);
+  }, [resources, activeCategory, activeSubject, activeInstitution, sort, query]);
 
   return (
     <div className="space-y-4">
@@ -105,6 +116,20 @@ export function ResourcesBrowser({
             ))}
           </div>
         </div>
+
+        {institutions.length > 0 && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Institution</p>
+            <div className="flex flex-wrap gap-2">
+              <FilterChip active={!activeInstitution} onClick={() => setActiveInstitution(null)}>All institutions</FilterChip>
+              {institutions.map(name => (
+                <FilterChip key={name} active={activeInstitution === name} onClick={() => setActiveInstitution(name)}>
+                  {name}
+                </FilterChip>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Sort by</p>

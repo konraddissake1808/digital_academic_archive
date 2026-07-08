@@ -9,7 +9,7 @@ interface Resource {
   category: { name: string };
   subject?: { name: string } | null;
   fileType?: string | null;
-  createdBy: { fullName: string | null };
+  createdBy: { fullName: string | null; institution?: string | null };
 }
 
 export function ResourceGrid({ resources }: { resources: Resource[] }) {
@@ -36,6 +36,7 @@ export function ResourceGrid({ resources }: { resources: Resource[] }) {
           subjectName={resource.subject?.name}
           fileType={resource.fileType}
           authorName={resource.createdBy.fullName}
+          institution={resource.createdBy.institution}
         />
       ))}
     </div>
