@@ -13,17 +13,18 @@ interface ResourceFormProps {
   initialData?: Partial<ResourceFormData> & { id?: string };
 }
 
-async function uploadFile(file: File): Promise<string> {
+async function uploadFile(file: File, type: "file" | "cover"): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("type", type);
 
   const res = await fetch("/api/upload", { method: "POST", body: formData });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? `Upload failed (${res.status})`);
   }
-  const { publicUrl } = await res.json();
-  return publicUrl;
+  const { url } = await res.json();
+  return url;
 }
 
 const selectClass =
@@ -55,8 +56,8 @@ export function ResourceForm({ categories, subjects, initialData }: ResourceForm
       try {
         let fileUrl = initialData?.fileUrl ?? null;
         let coverUrl = initialData?.coverUrl ?? null;
-        if (resourceFile) fileUrl = await uploadFile(resourceFile);
-        if (coverFile) coverUrl = await uploadFile(coverFile);
+        if (resourceFile) fileUrl = await uploadFile(resourceFile, "file");
+        if (coverFile) coverUrl = await uploadFile(coverFile, "cover");
 
         const data: ResourceFormData = {
           title: title.trim(),

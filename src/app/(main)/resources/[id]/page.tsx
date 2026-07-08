@@ -56,7 +56,7 @@ export default async function ResourceDetailPage({
   if (!resource) notFound();
 
   const hasPurchased = purchase?.status === "PAID";
-  const canAccess = resource.isFree || hasPurchased;
+  const canAccess = !!user && (resource.isFree || hasPurchased);
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
@@ -106,14 +106,16 @@ export default async function ResourceDetailPage({
           <p className="text-2xl font-bold text-gray-900">{formatPrice(resource.price)}</p>
 
           {canAccess && resource.fileUrl ? (
-            <a href={resource.fileUrl} target="_blank" rel="noopener noreferrer">
+            <a href={`/api/resources/${resource.id}/download`} target="_blank" rel="noopener noreferrer">
               <Button size="lg">Download</Button>
             </a>
           ) : canAccess ? (
             <Button size="lg" disabled>No file available yet</Button>
           ) : !user ? (
             <Link href={`/login?next=/resources/${resource.id}`}>
-              <Button size="lg">Sign in to Purchase</Button>
+              <Button size="lg">
+                {resource.isFree ? "Sign in to Download" : "Sign in to Purchase"}
+              </Button>
             </Link>
           ) : (
             <PurchaseButton resourceId={resource.id} />

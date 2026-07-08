@@ -49,6 +49,7 @@ function entryFromFile(file: File): FileEntry {
 async function uploadFile(file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("type", "file");
 
   const res = await fetch("/api/upload", {
     method: "POST",
@@ -60,8 +61,8 @@ async function uploadFile(file: File): Promise<string> {
     throw new Error(body.error ?? `Upload failed (${res.status})`);
   }
 
-  const { publicUrl } = await res.json();
-  return publicUrl;
+  const { url } = await res.json();
+  return url;
 }
 
 const inputClass =

@@ -11,6 +11,32 @@ function getAdminClient() {
   );
 }
 
+// "resources" holds the actual downloadable files and stays private — access is
+// brokered through /api/resources/[id]/download after checking sign-in + purchase.
+// "covers" holds thumbnail images, which are meant to be publicly visible.
+type UploadKind = "file" | "cover";
+
+async function ensureBucket(
+  admin: ReturnType<typeof getAdminClient>,
+  bucket: string,
+  isPublic: boolean
+) {
+  const { error } = await admin.storage.createBucket(bucket, {
+    public: isPublic,
+    allowedMimeTypes: undefined,
+    fileSizeLimit: null,
+  });
+  if (!error) return;
+  if (!error.message.includes("already exists")) throw error;
+  // Bucket already existed (possibly from before this bucket's visibility was
+  // decided) — make sure its visibility matches what we expect now.
+  const { error: updateError } = await admin.storage.updateBucket(bucket, {
+    public: isPublic,
+    fileSizeLimit: null,
+  });
+  if (updateError) throw updateError;
+}
+
 export async function POST(request: Request) {
   // Verify the user is a publisher or admin
   const supabase = await createClient();
@@ -32,10 +58,14 @@ export async function POST(request: Request) {
   // Receive file as multipart/form-data
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
+  const kind: UploadKind = formData.get("type") === "cover" ? "cover" : "file";
 
   if (!file) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
+
+  const bucket = kind === "cover" ? "covers" : "resources";
+  const isPublic = kind === "cover";
 
   const filePath = `${user.id}/${Date.now()}-${file.name}`;
   const arrayBuffer = await file.arrayBuffer();
@@ -43,20 +73,16 @@ export async function POST(request: Request) {
 
   const admin = getAdminClient();
 
-  // Ensure the bucket exists (creates it on first upload if missing)
-  const { error: bucketError } = await admin.storage.createBucket("resources", {
-    public: true,
-    allowedMimeTypes: undefined,
-    fileSizeLimit: null,
-  });
-  // Ignore "already exists" error
-  if (bucketError && !bucketError.message.includes("already exists")) {
-    console.error("[upload] Could not create bucket:", bucketError);
-    return NextResponse.json({ error: bucketError.message }, { status: 500 });
+  try {
+    await ensureBucket(admin, bucket, isPublic);
+  } catch (err) {
+    console.error("[upload] Could not prepare bucket:", err);
+    const message = err instanceof Error ? err.message : "Could not prepare storage bucket";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 
   const { data, error } = await admin.storage
-    .from("resources")
+    .from(bucket)
     .upload(filePath, buffer, {
       contentType: file.type || "application/octet-stream",
       upsert: false,
@@ -67,7 +93,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const { data: { publicUrl } } = admin.storage.from("resources").getPublicUrl(data.path);
+  // Cover images are public — store the real public URL for direct <img> use.
+  // Resource files are private — store the bare storage path; access is brokered
+  // through the authenticated download route, which mints a short-lived signed URL.
+  if (isPublic) {
+    const { data: { publicUrl } } = admin.storage.from(bucket).getPublicUrl(data.path);
+    return NextResponse.json({ url: publicUrl });
+  }
 
-  return NextResponse.json({ publicUrl });
+  return NextResponse.json({ url: data.path });
 }
