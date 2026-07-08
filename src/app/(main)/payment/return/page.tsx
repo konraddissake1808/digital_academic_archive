@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { ReturnLayout } from "@/components/return-layout";
+import { campayCheck } from "@/lib/campay";
 
 export default async function PaymentReturnPage({
   searchParams,
@@ -14,13 +15,36 @@ export default async function PaymentReturnPage({
     return <ReturnLayout status="error" message="Invalid payment link." />;
   }
 
-  const purchase = await prisma.purchase.findUnique({
+  let purchase = await prisma.purchase.findUnique({
     where: { externalReference: ref },
     include: { resource: { select: { id: true, title: true } } },
   });
 
   if (!purchase) {
     return <ReturnLayout status="error" message="Payment record not found." />;
+  }
+
+  // Don't rely solely on the webhook — the user landing here right after
+  // paying is a good moment to actively confirm status with CamPay in case
+  // the webhook hasn't fired yet (or isn't configured at all).
+  if (purchase.status === "PENDING" && purchase.campayReference) {
+    try {
+      const { status } = await campayCheck(purchase.campayReference);
+      const newStatus =
+        status === "SUCCESSFUL" ? "PAID" :
+        status === "FAILED" ? "FAILED" :
+        "PENDING";
+
+      if (newStatus !== purchase.status) {
+        purchase = await prisma.purchase.update({
+          where: { id: purchase.id },
+          data: { status: newStatus },
+          include: { resource: { select: { id: true, title: true } } },
+        });
+      }
+    } catch (err) {
+      console.error("[payment/return] status recheck failed", err);
+    }
   }
 
   if (purchase.status === "PAID") {
